@@ -1,2 +1,3 @@
 # raytracing_rust
-[click here](https://github.com/fralken/ray-tracing-in-one-weekend)
+
+Raytracing in One Week with Rust. ish.
