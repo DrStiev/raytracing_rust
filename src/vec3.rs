@@ -1,11 +1,13 @@
 use std::fmt;
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{Add, Div, Mul, Neg, Sub, Index, IndexMut};
 
 // define base structure
 #[derive(Clone, Copy, Debug)]
 pub struct Vec3 {
     e: [f64; 3], // declare an array of f64 with length 3
 }
+
+pub type Point3 = Vec3;
 
 // implement method that will be used afterwards
 impl Vec3 {
@@ -60,6 +62,20 @@ impl Vec3 {
 }
 
 // ridefinizione operatori
+impl Index<usize> for Vec3 {
+    type Output = f64;
+
+    fn index(&self, i:usize) -> &f64 {
+        &self.e[i]
+    }
+}
+
+impl IndexMut<usize> for Vec3 {
+    fn index_mut(&mut self, i:usize) -> &mut f64 {
+        &mut self.e[i]
+    }
+}
+
 impl Neg for Vec3 {
     type Output = Vec3;
 

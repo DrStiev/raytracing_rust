@@ -23,9 +23,34 @@ mod logger;
 use logger::*;
 use LogLevel::*;
 
+// TODO: to be completed
+// mod texture;
+// use texture::*;
+
+mod interval;
+use interval::*;
+
+mod color;
+use color::*;
+
+mod ray;
+use ray::*;
+
+mod aabb;
+use aabb::*;
+
+// TODO: to be completed
+// mod hittable;
+// use hittable::*;
+
 use std::{thread, time};
+extern crate termsize;
 
 fn main() {
+    let total_steps = 100; // this value is used to set the size of the pb and to make it display gracefully
+    progressbar(total_steps, "RAY TRACING IN ONE WEEK WITH RUST");
+
+
     let e = [1.0, 2.0, 3.0];
     let res: f64 = e.iter().map(|x| x * x).sum();
     print!("e:{:?}, res:{}\n", e, res);
@@ -37,18 +62,22 @@ fn main() {
     print!("x: {}\n", y);
 
     let mut l = Logger::new();
-    print!("l: {}\n", l);
+    print!("l: {}", l);
 
     thread::sleep(time::Duration::from_millis(5000)); // wait 5000 millisec
 
     l.set_description("Testo lungo lungo lunghissimo");
-    print!("l: {}\n", l);
+    print!("l: {}", l);
 
     l.write_to_file("log.log");
     thread::sleep(time::Duration::from_millis(5000)); // wait 5000 millisec
     l.set_level(ERROR);
-    print!("l: {}\n", l);
+    print!("l: {}", l);
     l.write_to_file("log.log");
-    // let total_steps = 100;
-    // progressbar(total_steps, "RAY TRACING IN ONE WEEK WITH RUST");
+
+    let p = Point3::new_empty();
+    print!("p: {}\n", p);
+
+    let i = Interval::with_values(10.0, 100.0);
+    print!("i: {}\n", i);
 }
