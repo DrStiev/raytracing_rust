@@ -22,7 +22,7 @@ impl Ray {
             tm: 0.0,
         }
     }
-    pub fn with_origin_direction_and_time(origin: Point3, direction: Vec3, time:f64) -> Self {
+    pub fn with_origin_direction_and_time(origin: Point3, direction: Vec3, time: f64) -> Self {
         Ray {
             orig: origin,
             dir: direction,
@@ -39,7 +39,7 @@ impl Ray {
     pub fn time(&self) -> f64 {
         self.tm
     }
-    pub fn at(&self, t:f64) -> Point3 {
+    pub fn at(&self, t: f64) -> Point3 {
         self.orig + t * self.dir
     }
 }

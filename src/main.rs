@@ -24,8 +24,8 @@ use logger::*;
 use LogLevel::*;
 
 // TODO: to be completed
-// mod texture;
-// use texture::*;
+mod texture;
+use texture::*;
 
 mod interval;
 use interval::*;
@@ -39,9 +39,11 @@ use ray::*;
 mod aabb;
 use aabb::*;
 
-// TODO: to be completed
-// mod hittable;
-// use hittable::*;
+mod hittable;
+use hittable::*;
+
+mod material;
+use material::*;
 
 use std::{thread, time};
 extern crate termsize;
@@ -49,7 +51,6 @@ extern crate termsize;
 fn main() {
     let total_steps = 100; // this value is used to set the size of the pb and to make it display gracefully
     progressbar(total_steps, "RAY TRACING IN ONE WEEK WITH RUST");
-
 
     let e = [1.0, 2.0, 3.0];
     let res: f64 = e.iter().map(|x| x * x).sum();

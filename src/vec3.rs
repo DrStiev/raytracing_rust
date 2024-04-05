@@ -1,5 +1,5 @@
 use std::fmt;
-use std::ops::{Add, Div, Mul, Neg, Sub, Index, IndexMut};
+use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
 
 // define base structure
 #[derive(Clone, Copy, Debug)]
@@ -65,13 +65,13 @@ impl Vec3 {
 impl Index<usize> for Vec3 {
     type Output = f64;
 
-    fn index(&self, i:usize) -> &f64 {
+    fn index(&self, i: usize) -> &f64 {
         &self.e[i]
     }
 }
 
 impl IndexMut<usize> for Vec3 {
-    fn index_mut(&mut self, i:usize) -> &mut f64 {
+    fn index_mut(&mut self, i: usize) -> &mut f64 {
         &mut self.e[i]
     }
 }
@@ -174,41 +174,6 @@ pub fn cross(u: &Vec3, v: &Vec3) -> Vec3 {
 
 pub fn unit_vector(v: Vec3) -> Vec3 {
     v / v.length()
-}
-
-pub fn reflect(v: Vec3, n: Vec3) -> Vec3 {
-    v - 2.0 * dot(&v, &n) * n
-}
-
-pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f64) -> Vec3 {
-    let cos_theta: f64 = dot(&-uv, &n).min(1.0);
-    let r_out_perp: Vec3 = etai_over_etat * (uv + cos_theta * n);
-    let r_out_parallel: Vec3 = -(1.0 - r_out_perp.length_squared()).abs().sqrt() * n;
-    r_out_parallel + r_out_perp
-}
-
-pub fn random_cosine_direction() -> Vec3 {
-    let r1: f64 = rand::random();
-    let r2: f64 = rand::random();
-
-    let phi: f64 = 2.0 * std::f64::consts::PI * r1;
-    let x = phi.cos() * r2.sqrt();
-    let y = phi.sin() * r2.sqrt();
-    let z = (1.0 - r2).sqrt();
-    Vec3::new(x, y, z)
-}
-
-pub fn random_in_unit_disk() -> Vec3 {
-    loop {
-        let p: Vec3 = Vec3::new(
-            -1.0 + (1.0 - -1.0) * rand::random::<f64>(),
-            -1.0 + (1.0 - -1.0) * rand::random::<f64>(),
-            -1.0 + (1.0 - -1.0) * rand::random::<f64>(),
-        );
-        if p.length_squared() < 1.0 {
-            break p;
-        }
-    }
 }
 
 pub fn random_in_unit_sphere() -> Vec3 {

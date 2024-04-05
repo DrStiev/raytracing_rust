@@ -1,17 +1,17 @@
 use crate::{Color, Interval, Point3};
 use std::sync::Arc;
 
-trait Texture {
-    fn value(&self, u:f64, v:f64, p:&Point3)-> Color;
+pub trait Texture {
+    fn value(&self, u: f64, v: f64, p: &Point3) -> Color;
 }
 
-struct SolidColor {
-    color_value:Color,
+pub struct SolidColor {
+    color_value: Color,
 }
 
 impl SolidColor {
-    fn new(c: Color) -> Self {
-        Self {color_value: c}
+    pub fn new(c: Color) -> Self {
+        Self { color_value: c }
     }
 }
 
@@ -21,14 +21,14 @@ impl Texture for SolidColor {
     }
 }
 
-struct CheckerTexture {
+pub struct CheckerTexture {
     inv_scale: f64,
     even: Arc<dyn Texture>,
     odd: Arc<dyn Texture>,
 }
 
 impl CheckerTexture {
-    fn new(scale: f64, even: Arc<dyn Texture>, odd: Arc<dyn Texture>) -> Self {
+    pub fn new(scale: f64, even: Arc<dyn Texture>, odd: Arc<dyn Texture>) -> Self {
         Self {
             inv_scale: 1.0 / scale,
             even,
@@ -38,12 +38,12 @@ impl CheckerTexture {
 }
 
 impl Texture for CheckerTexture {
-    fn value(&self, u: f64, v: f64, p: &Point3)-> Color {
-        let x_integer = (self.inv_scale*p.x()).floor() as i64;
-        let y_integer = (self.inv_scale*p.y()).floor() as i64;
-        let z_integer = (self.inv_scale*p.z()).floor() as i64;
+    fn value(&self, u: f64, v: f64, p: &Point3) -> Color {
+        let x_integer = (self.inv_scale * p.x()).floor() as i64;
+        let y_integer = (self.inv_scale * p.y()).floor() as i64;
+        let z_integer = (self.inv_scale * p.z()).floor() as i64;
 
-        let is_even = (x_integer+y_integer+z_integer)%2==0;
+        let is_even = (x_integer + y_integer + z_integer) % 2 == 0;
 
         if is_even {
             self.even.value(u, v, p)
@@ -52,13 +52,13 @@ impl Texture for CheckerTexture {
         }
     }
 }
-
-struct ImageTexture {
+// TODO: find implementation of stb_image.h for rust
+pub struct ImageTexture {
     image: RtwImage,
 }
 
 impl ImageTexture {
-    fn new(filename: &str) -> Self {
+    pub fn new(filename: &str) -> Self {
         Self {
             image: RtwImage::new(filename),
         }
@@ -89,13 +89,13 @@ impl Texture for ImageTexture {
     }
 }
 
-struct NoiseTexture {
+pub struct NoiseTexture {
     scale: f64,
     noise: Perlin,
 }
 
 impl NoiseTexture {
-    fn new(sc: f64) -> Self {
+    pub fn new(sc: f64) -> Self {
         Self {
             scale: sc,
             noise: Perlin::new(),

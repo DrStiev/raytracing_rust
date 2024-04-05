@@ -19,10 +19,10 @@ impl Interval {
     }
 
     pub fn with_interval(a: Interval, b: Interval) -> Self {
-        Self { 
+        Self {
             min: f64::min(a.min, b.min),
-            max: f64::max(a.max,b.max),
-         }
+            max: f64::max(a.max, b.max),
+        }
     }
 
     pub fn contains(&self, x: f64) -> bool {

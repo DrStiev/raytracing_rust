@@ -6,11 +6,13 @@ extern crate termsize;
 pub fn progressbar(total_steps: usize, desc: &str) {
     // set the pb size to the appropriate terminal width
     let mut width = 0;
-    termsize::get().map(|size| {
-        width = size.cols
-    });
+    termsize::get().map(|size| width = size.cols);
 
-    let size = if usize::from(width - 35) > desc.len() + total_steps {total_steps} else {usize::from(width)-(36+desc.len())};
+    let size = if usize::from(width - 35) > desc.len() + total_steps {
+        total_steps
+    } else {
+        usize::from(width) - (36 + desc.len())
+    };
 
     // ANSI escape codes for colors
     let green = "\x1B[32m";
@@ -50,7 +52,7 @@ pub fn progressbar(total_steps: usize, desc: &str) {
 
     let total_time = start_time.elapsed().as_secs_f64();
     println!(
-        "\n{}{} completed! in {:.1} seconds!{}",
+        "\n{}{} completed in {:.1} seconds!{}",
         green, desc, total_time, reset
     );
 }

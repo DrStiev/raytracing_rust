@@ -1,13 +1,17 @@
-use std::io::Write;
 use crate::{Interval, Vec3};
+use std::io::Write;
 
 pub type Color = Vec3;
 
-pub fn linear_to_gamma(linear_component:f64) -> f64 {
+pub fn linear_to_gamma(linear_component: f64) -> f64 {
     linear_component.sqrt()
 }
 
-pub fn write_color<W: Write>(mut out: W, pixel_color: Color, samples_per_pixel: i64) -> std::io::Result<()> {
+pub fn write_color<W: Write>(
+    mut out: W,
+    pixel_color: Color,
+    samples_per_pixel: i64,
+) -> std::io::Result<()> {
     let mut r = pixel_color.x();
     let mut g = pixel_color.y();
     let mut b = pixel_color.z();
