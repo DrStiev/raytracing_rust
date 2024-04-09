@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, ops::Mul};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Interval {

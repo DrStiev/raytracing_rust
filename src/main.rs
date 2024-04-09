@@ -45,6 +45,18 @@ use hittable::*;
 mod material;
 use material::*;
 
+mod pdf;
+use pdf::*;
+
+mod onb;
+use onb::*;
+
+mod bvh;
+use bvh::*;
+
+mod hittable_list;
+use hittable_list::*;
+
 use std::{thread, time};
 extern crate termsize;
 

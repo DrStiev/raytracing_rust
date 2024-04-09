@@ -1,5 +1,5 @@
 use std::fmt;
-use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
+use std::ops::{Add, AddAssign, Div, Index, IndexMut, Mul, Neg, Sub};
 
 // define base structure
 #[derive(Clone, Copy, Debug)]
@@ -149,6 +149,14 @@ impl Div<Vec3> for f64 {
 
     fn div(self, v: Vec3) -> Vec3 {
         Vec3::new(self / v.e[0], self / v.e[1], self / v.e[2])
+    }
+}
+
+impl AddAssign for Vec3 {
+    fn add_assign(&mut self, rhs: Self) {
+        self.e[0] = self.e[0] + rhs.e[0];
+        self.e[1] = self.e[1] + rhs.e[1];
+        self.e[2] = self.e[2] + rhs.e[2];
     }
 }
 

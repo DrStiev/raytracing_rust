@@ -1,4 +1,4 @@
-use crate::{util, Interval, Material, Point3, Ray, Vec3, AABB};
+use crate::{util, vec3::*, Interval, Material, Point3, Ray, AABB};
 
 use std::sync::Arc;
 
@@ -6,7 +6,7 @@ use std::sync::Arc;
 pub struct HitRecord {
     pub p: Point3,
     pub normal: Vec3,
-    pub mat: Arc<dyn Material>,
+    pub mat: Option<Arc<dyn Material>>,
     pub t: f64,
     pub u: f64,
     pub v: f64,
@@ -14,8 +14,19 @@ pub struct HitRecord {
 }
 
 impl HitRecord {
+    pub fn new() -> Self {
+        Self {
+            p: Point3::new_empty(),
+            normal: Vec3::new_empty(),
+            mat: None,
+            t: 0.0,
+            u: 0.0,
+            v: 0.0,
+            front_face: false,
+        }
+    }
     pub fn set_face_normal(&self, r: Ray, outward_normal: Vec3) {
-        self.front_face = Vec3::dot(r.direction(), outward_normal) < 0;
+        self.front_face = dot(&r.direction(), &outward_normal) < 0.0;
         self.normal = if self.front_face {
             outward_normal
         } else {
@@ -30,7 +41,7 @@ pub trait Hittable {
     fn pdf_value(&self, o: &Vec3, v: &Vec3) -> f64 {
         0.0
     }
-    fn random(o: &Vec3) -> Vec3 {
+    fn random(&self, o: &Vec3) -> Vec3 {
         Vec3::new(1.0, 0.0, 0.0)
     }
 }
@@ -87,9 +98,9 @@ impl RotateY {
         for i in 0..2 {
             for j in 0..2 {
                 for k in 0..2 {
-                    let x = i * bbox.x.max + (1 - i) * bbox.x.min;
-                    let y = j * bbox.y.max + (1 - j) * bbox.y.min;
-                    let z = k * bbox.z.max + (1 - k) * bbox.z.min;
+                    let x: f64 = i as f64 * bbox.x.max + (1 - i) as f64 * bbox.x.min;
+                    let y: f64 = j as f64 * bbox.y.max + (1 - j) as f64 * bbox.y.min;
+                    let z: f64 = k as f64 * bbox.z.max + (1 - k) as f64 * bbox.z.min;
 
                     let newx = cos_theta * x * sin_theta * z;
                     let newz = -sin_theta * x + cos_theta * z;
