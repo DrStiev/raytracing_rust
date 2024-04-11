@@ -5,9 +5,9 @@ authors = ["Matteo Stievano"]
 edition = "2018"
 
 [dependencies]
-log = "0.4.21"
-env_logger = "0.11.3"
-chrono = "0.4.37"
-rand = "0.8"
-image = "0.25.1"
-termsize = "0.1"
+chrono = "*"
+rand = "*"
+image = "*"
+termsize = "*"
+nalgebra = "*" 
+rayon = "*"

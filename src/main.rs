@@ -1,111 +1,110 @@
-// start  working on raytracing porting from c++ to rust
 // HELP: https://github.com/fralken/ray-tracing-in-one-weekend
-
-/*
-* MAIN IDEA
-* logger.rs file to handle writing log on a file
-* progressbar.rs to show the progression of the software
-* try to use as many external crate as possible to better understand
-* the code and algorithm. Then try to optimize the code
-*/
-#![allow(warnings)]
-
-mod progressbar;
-use progressbar::progressbar;
-
-mod vec3;
-use vec3::*; // use all functions declared with pub keyword
-
-mod util;
-use util::*;
-
-mod logger;
-use logger::*;
-use LogLevel::*;
-
-// TODO: to be completed
-mod texture;
-use texture::*;
-
-mod interval;
-use interval::*;
-
-mod color;
-use color::*;
-
-mod ray;
-use ray::*;
-
-mod aabb;
-use aabb::*;
-
-mod hittable;
-use hittable::*;
-
-mod material;
-use material::*;
-
-mod pdf;
-use pdf::*;
-
-mod onb;
-use onb::*;
-
-mod bvh;
-use bvh::*;
-
-mod hittable_list;
-use hittable_list::*;
-
-mod perlin;
-use perlin::*;
-
-mod constant_medium;
-use constant_medium::*;
-
-mod sphere;
-use sphere::*;
-
-mod quad;
-use quad::*;
-
-mod camera;
-use camera::*;
-
+// https://github.com/lopossumi/Rust-Output-Image
 use std::{thread, time};
 extern crate termsize;
 
+mod camera;
+mod color;
+mod hittable;
+mod logger;
+mod material;
+mod progressbar;
+mod ray;
+mod sphere;
+mod util;
+
+// use image;
+use nalgebra::Vector3;
+use rand::Rng;
+use rayon::prelude::*;
+use std::f64;
+
+use crate::camera::Camera;
+use crate::color::color;
+use crate::hittable::{Hittable, HittableList};
+use crate::material::{Dielectric, Lambertian, Metal};
+use crate::ray::Ray;
+use crate::sphere::Sphere;
+use crate::util::{random_in_unit_disk, random_in_unit_sphere};
+use crate::{logger::*, progressbar::*, LogLevel::*};
+
+// #[cfg(test)]
+mod test;
+use crate::test::{random_scene, set_camera};
+
+// cargo run > image.ppm
+
 fn main() {
-    let total_steps = 100; // this value is used to set the size of the pb and to make it display gracefully
-    progressbar(total_steps, "RAY TRACING IN ONE WEEK WITH RUST");
-
-    let e = [1.0, 2.0, 3.0];
-    let res: f64 = e.iter().map(|x| x * x).sum();
-    print!("e:{:?}, res:{}\n", e, res);
-
-    let x = Vec3::new_empty();
-    print!("x: {}\n", x);
-
-    let y = random_cosine_direction();
-    print!("x: {}\n", y);
+    // let total_steps: usize = 100; // this value is used to set the size of the pb and to make it display gracefully
+    // progressbar(total_steps, "RAY TRACING IN ONE WEEK WITH RUST");
 
     let mut l = Logger::new();
-    print!("l: {}", l);
+    l.set_level(INFO);
+    l.set_description("START WORKING WITH RAYTRACING AND RUST!");
+    let _ = l.write_to_file("log.log");
 
-    thread::sleep(time::Duration::from_millis(5000)); // wait 5000 millisec
+    let ns = 100;
+    let nx = 1280;
+    let ny = 720;
 
-    l.set_description("Testo lungo lungo lunghissimo");
-    print!("l: {}", l);
+    l.set_level(DEBUG);
+    l.set_description("Initialize Camera");
+    let _ = l.write_to_file("log.log");
 
-    l.write_to_file("log.log");
-    thread::sleep(time::Duration::from_millis(5000)); // wait 5000 millisec
-    l.set_level(ERROR);
-    print!("l: {}", l);
-    l.write_to_file("log.log");
+    let cam = set_camera(
+        nx,
+        ny,
+        Vector3::new(13.0, 2.0, 3.0),
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        20.0,
+        10.0,
+        0.1,
+    );
 
-    let p = Point3::new_empty();
-    print!("p: {}\n", p);
+    l.set_level(DEBUG);
+    l.set_description("Initialize Scene (or World)");
+    let _ = l.write_to_file("log.log");
 
-    let i = Interval::with_values(10.0, 100.0);
-    print!("i: {}\n", i);
+    let world = random_scene();
+    // create the image
+    l.set_level(DEBUG);
+    l.set_description("Create Image exploiting parallelization with rayon");
+    let _ = l.write_to_file("log.log");
+
+    println!("P3\n{} {}\n255", nx, ny);
+    let image = (0..ny)
+        .into_par_iter()
+        .rev()
+        .flat_map(|y| {
+            (0..nx)
+                .flat_map(|x| {
+                    let col: Vector3<f64> = (0..ns)
+                        .map(|_| {
+                            let mut rng = rand::thread_rng();
+                            let u = (x as f64 + rng.gen::<f64>()) / nx as f64;
+                            let v = (y as f64 + rng.gen::<f64>()) / ny as f64;
+                            let ray = cam.get_ray(u, v);
+                            color(&ray, &world, 0)
+                        })
+                        .sum();
+                    col.iter()
+                        .map(|c| (255.99 * (c / ns as f64).sqrt().max(0.0).min(1.0)) as u8)
+                        .collect::<Vec<u8>>()
+                })
+                .collect::<Vec<u8>>()
+        })
+        .collect::<Vec<u8>>();
+
+    // save the image to file
+    l.set_level(DEBUG);
+    l.set_description("Save image into a .ppm file");
+    let _ = l.write_to_file("log.log");
+    for col in image.chunks(3) {
+        println!("{} {} {}", col[0], col[1], col[2]);
+    }
+
+    l.set_level(INFO);
+    l.set_description("END WORKING WITH RAYTRACING AND RUST!");
+    let _ = l.write_to_file("log.log");
 }

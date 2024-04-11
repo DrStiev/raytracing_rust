@@ -1,194 +1,114 @@
-// TODO: to be completed
-use crate::{
-    random_in_unit_sphere, util::*, vec3::*, Color, CosinePdf, HitRecord, Pdf, Point3, Ray,
-    SolidColor, SpherePdf, Texture,
-};
-use std::{ptr, sync::Arc};
+use nalgebra::Vector3;
+use rand::Rng;
 
-pub struct ScatterRecord {
-    pub attenuation: Color,
-    pub pdf_ptr: Option<Arc<dyn Pdf>>,
-    pub skip_pdf: bool,
-    pub skip_pdf_ray: Ray,
+use crate::hittable::HitRecord;
+use crate::ray::Ray;
+use crate::util::random_in_unit_sphere;
+
+fn reflect(v: &Vector3<f64>, n: &Vector3<f64>) -> Vector3<f64> {
+    v - 2.0 * v.dot(&n) * n
 }
 
-impl ScatterRecord {
-    pub fn new() -> Self {
-        Self {
-            attenuation: Color::new_empty(),
-            pdf_ptr: None,
-            skip_pdf: false,
-            skip_pdf_ray: Ray::new(),
-        }
+fn refract(v: &Vector3<f64>, n: &Vector3<f64>, ni_over_nt: f64) -> Option<Vector3<f64>> {
+    let uv = v.normalize();
+    let dt = uv.dot(&n);
+    let discriminant = 1.0 - ni_over_nt.powi(2) * (1.0 - dt.powi(2));
+    if discriminant > 0.0 {
+        let refracted = ni_over_nt * (uv - n * dt) - n * discriminant.sqrt();
+        Some(refracted)
+    } else {
+        None
     }
 }
 
-pub trait Material {
-    fn emitted(&self, r_in: Ray, rec: HitRecord, u: f64, v: f64, p: Point3) -> Color {
-        Color::new(0.0, 0.0, 0.0)
-    }
-    fn scatter(&self, r_in: Ray, rec: HitRecord, srec: &mut ScatterRecord) -> bool {
-        false
-    }
-    fn scattering_pdf(&self, r_in: Ray, rec: HitRecord, scattered: Ray) -> f64 {
-        0.0
-    }
+fn schlick(cosine: f64, ref_idx: f64) -> f64 {
+    let r0 = ((1.0 - ref_idx) / (1.0 + ref_idx)).powi(2);
+    r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
+}
+
+pub trait Material: Sync {
+    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f64>)>;
 }
 
 pub struct Lambertian {
-    albedo: Arc<dyn Texture>,
+    albedo: Vector3<f64>,
 }
 
 impl Lambertian {
-    pub fn color(a: Color) -> Self {
-        Self {
-            albedo: Arc::new(SolidColor::new(a)),
-        }
-    }
-    pub fn texture(a: Arc<dyn Texture>) -> Self {
-        Self { albedo: a }
+    pub fn new(albedo: Vector3<f64>) -> Self {
+        Self { albedo }
     }
 }
 
+// '_' before a variable name tells the compiler to not worry if the
+// parameter is not used. unless it throw a warning
 impl Material for Lambertian {
-    fn scatter(&self, r_in: Ray, rec: HitRecord, srec: &mut ScatterRecord) -> bool {
-        srec.attenuation = self.albedo.value(rec.u, rec.v, &rec.p);
-        srec.pdf_ptr = Some(Arc::new(CosinePdf::new(rec.normal)));
-        srec.skip_pdf = false;
-        true
-    }
-    fn scattering_pdf(&self, r_in: Ray, rec: HitRecord, scattered: Ray) -> f64 {
-        let cos_theta = dot(&rec.normal, &unit_vector(scattered.direction()));
-        if cos_theta < 0.0 {
-            return 0.0;
-        }
-        cos_theta / std::f64::consts::PI
+    fn scatter(&self, _ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f64>)> {
+        let target = hit.p + hit.normal + random_in_unit_sphere();
+        let scattered = Ray::new(hit.p, target - hit.p);
+        Some((scattered, self.albedo))
     }
 }
 
 pub struct Metal {
-    albedo: Color,
+    albedo: Vector3<f64>,
     fuzz: f64,
 }
 
 impl Metal {
-    pub fn new(a: Color, f: f64) -> Self {
+    pub fn new(albedo: Vector3<f64>, fuzz: f64) -> Self {
         Self {
-            albedo: a,
-            fuzz: if f < 1.0 { f } else { 1.0 },
+            albedo,
+            fuzz: if fuzz < 1.0 { fuzz } else { 1.0 },
         }
     }
 }
 
 impl Material for Metal {
-    fn scatter(&self, r_in: Ray, rec: HitRecord, srec: &mut ScatterRecord) -> bool {
-        srec.attenuation = self.albedo;
-        srec.pdf_ptr = None;
-        srec.skip_pdf = true;
-        let reflected: Vec3 = reflect(unit_vector(r_in.direction()), rec.normal);
-        srec.skip_pdf_ray = Ray::with_origin_direction_and_time(
-            rec.p,
-            reflected + self.fuzz * random_in_unit_sphere(),
-            r_in.time(),
-        );
-        true
+    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f64>)> {
+        let mut reflected = reflect(&ray.direction().normalize(), &hit.normal);
+        if self.fuzz > 0.0 {
+            reflected += self.fuzz * random_in_unit_sphere()
+        };
+        if reflected.dot(&hit.normal) > 0.0 {
+            let scattered = Ray::new(hit.p, reflected);
+            Some((scattered, self.albedo))
+        } else {
+            None
+        }
     }
 }
 
 pub struct Dielectric {
-    ir: f64,
+    ref_idx: f64,
 }
 
 impl Dielectric {
-    pub fn new(index_of_refraction: f64) -> Self {
-        Self {
-            ir: index_of_refraction,
-        }
-    }
-
-    fn reflactance(cosine: f64, ref_idx: f64) -> f64 {
-        let mut r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
-        r0 = r0 * r0;
-        r0 + (1.0 - r0) * f64::powf((1.0 - cosine), 5.0)
+    pub fn new(ref_idx: f64) -> Self {
+        Self { ref_idx }
     }
 }
 
 impl Material for Dielectric {
-    fn scatter(&self, r_in: Ray, rec: HitRecord, srec: &mut ScatterRecord) -> bool {
-        srec.attenuation = Color::new(1.0, 1.0, 1.0);
-        srec.pdf_ptr = None;
-        srec.skip_pdf = true;
-        let refraction_ratio: f64 = if rec.front_face {
-            1.0 / self.ir
+    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f64>)> {
+        let attenuation = Vector3::new(1.0, 1.0, 1.0);
+        let (outward_normal, ni_over_nt, cosine) = if ray.direction().dot(&hit.normal) > 0.0 {
+            let cosine =
+                self.ref_idx * ray.direction().dot(&hit.normal) / ray.direction().magnitude();
+            (-hit.normal, self.ref_idx, cosine)
         } else {
-            self.ir
+            let cosine = -ray.direction().dot(&hit.normal) / ray.direction().magnitude();
+            (hit.normal, 1.0 / self.ref_idx, cosine)
         };
-
-        let unit_direction: Vec3 = unit_vector(r_in.direction());
-        let cos_theta: f64 = f64::min(dot(&-unit_direction, &rec.normal), 1.0);
-        let sin_theta: f64 = f64::sqrt(1.0 - cos_theta * cos_theta);
-
-        let cannot_refract: bool = refraction_ratio * sin_theta > 1.0;
-        let mut direction: Vec3 = Vec3::new_empty();
-
-        if cannot_refract || Dielectric::reflactance(cos_theta, refraction_ratio) > random_double()
-        {
-            direction = reflect(unit_direction, rec.normal);
-        } else {
-            direction = refract(unit_direction, rec.normal, refraction_ratio);
+        if let Some(refracted) = refract(&ray.direction(), &outward_normal, ni_over_nt) {
+            let reflect_prob = schlick(cosine, self.ref_idx);
+            if rand::thread_rng().gen::<f64>() >= reflect_prob {
+                let scattered = Ray::new(hit.p, refracted);
+                return Some((scattered, attenuation));
+            }
         }
-        srec.skip_pdf_ray = Ray::with_origin_direction_and_time(rec.p, direction, r_in.time());
-        true
-    }
-}
-
-pub struct DiffuseLight {
-    emit: Arc<dyn Texture>,
-}
-
-impl DiffuseLight {
-    pub fn with_texture(a: Arc<dyn Texture>) -> Self {
-        Self { emit: a }
-    }
-    pub fn with_color(c: Color) -> Self {
-        Self {
-            emit: Arc::new(SolidColor::new(c)),
-        }
-    }
-}
-
-impl Material for DiffuseLight {
-    fn emitted(&self, r_in: Ray, rec: HitRecord, u: f64, v: f64, p: Point3) -> Color {
-        if !rec.front_face {
-            return Color::new(0.0, 0.0, 0.0);
-        }
-        self.emit.value(u, v, &p)
-    }
-}
-
-pub struct Isotropic {
-    albedo: Arc<dyn Texture>,
-}
-
-impl Isotropic {
-    pub fn with_color(c: Color) -> Self {
-        Self {
-            albedo: Arc::new(SolidColor::new(c)),
-        }
-    }
-    pub fn with_texture(a: Arc<dyn Texture>) -> Self {
-        Self { albedo: a }
-    }
-}
-
-impl Material for Isotropic {
-    fn scatter(&self, r_in: Ray, rec: HitRecord, srec: &mut ScatterRecord) -> bool {
-        srec.attenuation = self.albedo.value(rec.u, rec.v, &rec.p);
-        srec.pdf_ptr = Some(Arc::new(SpherePdf::new()));
-        srec.skip_pdf = false;
-        true
-    }
-    fn scattering_pdf(&self, r_in: Ray, rec: HitRecord, scattered: Ray) -> f64 {
-        1.0 / (4.0 * std::f64::consts::PI)
+        let reflected = reflect(&ray.direction(), &hit.normal);
+        let scattered = Ray::new(hit.p, reflected);
+        Some((scattered, attenuation))
     }
 }

@@ -1,8 +1,7 @@
 use chrono::Local;
 use std::fmt;
-use std::fs::{File, OpenOptions};
-use std::io::{prelude::*, Write};
-use std::path::Path;
+use std::fs::OpenOptions;
+use std::io::Write;
 
 /*
 * Very rough logger
