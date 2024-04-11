@@ -12,6 +12,17 @@ pub struct ScatterRecord {
     pub skip_pdf_ray: Ray,
 }
 
+impl ScatterRecord {
+    pub fn new() -> Self {
+        Self {
+            attenuation: Color::new_empty(),
+            pdf_ptr: None,
+            skip_pdf: false,
+            skip_pdf_ray: Ray::new(),
+        }
+    }
+}
+
 pub trait Material {
     fn emitted(&self, r_in: Ray, rec: HitRecord, u: f64, v: f64, p: Point3) -> Color {
         Color::new(0.0, 0.0, 0.0)

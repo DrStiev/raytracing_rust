@@ -1,4 +1,4 @@
-use crate::{Color, Interval, Point3};
+use crate::{Color, Interval, Perlin, Point3};
 use std::sync::Arc;
 
 pub trait Texture {
@@ -106,6 +106,6 @@ impl NoiseTexture {
 impl Texture for NoiseTexture {
     fn value(&self, _u: f64, _v: f64, p: &Point3) -> Color {
         let s = self.scale * *p;
-        Color::new(1.0, 1.0, 1.0) * 0.5 * (1.0 + f64::sin(s.z() + 10.0 * self.noise.turb(s)))
+        Color::new(1.0, 1.0, 1.0) * 0.5 * (1.0 + f64::sin(s.z() + 10.0 * self.noise.turb(s, 7)))
     }
 }

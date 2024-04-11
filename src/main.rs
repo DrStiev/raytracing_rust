@@ -57,6 +57,21 @@ use bvh::*;
 mod hittable_list;
 use hittable_list::*;
 
+mod perlin;
+use perlin::*;
+
+mod constant_medium;
+use constant_medium::*;
+
+mod sphere;
+use sphere::*;
+
+mod quad;
+use quad::*;
+
+mod camera;
+use camera::*;
+
 use std::{thread, time};
 extern crate termsize;
 

@@ -6,6 +6,11 @@ pub struct ONB {
 }
 
 impl ONB {
+    pub fn new() -> Self {
+        Self {
+            axis: [Vec3::new_empty(), Vec3::new_empty(), Vec3::new_empty()],
+        }
+    }
     pub fn u(&self) -> Vec3 {
         self.axis[0]
     }

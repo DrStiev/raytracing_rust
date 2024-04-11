@@ -10,7 +10,7 @@ pub fn linear_to_gamma(linear_component: f64) -> f64 {
 pub fn write_color<W: Write>(
     mut out: W,
     pixel_color: Color,
-    samples_per_pixel: i64,
+    samples_per_pixel: usize,
 ) -> std::io::Result<()> {
     let mut r = pixel_color.x();
     let mut g = pixel_color.y();

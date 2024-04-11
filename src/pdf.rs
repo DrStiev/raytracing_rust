@@ -56,10 +56,10 @@ pub struct HittablePdf {
 }
 
 impl HittablePdf {
-    pub fn new(objects: Arc<dyn Hittable>, origin: Point3) -> Self {
+    pub fn new(objects: impl Hittable, origin: Point3) -> Self {
         Self {
             origin: origin,
-            objects: objects,
+            objects: Arc::new(objects),
         }
     }
 }
