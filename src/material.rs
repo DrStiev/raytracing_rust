@@ -43,9 +43,9 @@ impl Lambertian {
 // '_' before a variable name tells the compiler to not worry if the
 // parameter is not used. unless it throw a warning
 impl Material for Lambertian {
-    fn scatter(&self, _ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f64>)> {
+    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f64>)> {
         let target = hit.p + hit.normal + random_in_unit_sphere();
-        let scattered = Ray::new(hit.p, target - hit.p);
+        let scattered = Ray::new(hit.p, target - hit.p, ray.time());
         Some((scattered, self.albedo))
     }
 }
@@ -71,7 +71,7 @@ impl Material for Metal {
             reflected += self.fuzz * random_in_unit_sphere()
         };
         if reflected.dot(&hit.normal) > 0.0 {
-            let scattered = Ray::new(hit.p, reflected);
+            let scattered = Ray::new(hit.p, reflected, ray.time());
             Some((scattered, self.albedo))
         } else {
             None
@@ -103,12 +103,12 @@ impl Material for Dielectric {
         if let Some(refracted) = refract(&ray.direction(), &outward_normal, ni_over_nt) {
             let reflect_prob = schlick(cosine, self.ref_idx);
             if rand::thread_rng().gen::<f64>() >= reflect_prob {
-                let scattered = Ray::new(hit.p, refracted);
+                let scattered = Ray::new(hit.p, refracted, ray.time());
                 return Some((scattered, attenuation));
             }
         }
         let reflected = reflect(&ray.direction(), &hit.normal);
-        let scattered = Ray::new(hit.p, reflected);
+        let scattered = Ray::new(hit.p, reflected, ray.time());
         Some((scattered, attenuation))
     }
 }

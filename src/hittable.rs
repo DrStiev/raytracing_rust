@@ -1,5 +1,6 @@
 use nalgebra::Vector3;
 
+use crate::aabb::{self, AABB};
 use crate::material::Material;
 use crate::ray::Ray;
 
@@ -12,8 +13,9 @@ pub struct HitRecord<'a> {
     pub material: &'a dyn Material,
 }
 
-pub trait Hittable: Sync {
+pub trait Hittable {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
+    fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB>;
 }
 
 #[derive(Default)]
@@ -40,5 +42,22 @@ impl Hittable for HittableList {
             }
         }
         hit_anything
+    }
+
+    fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB> {
+        match self.list.first() {
+            Some(first) => {
+                match first.bounding_box(t0, t1) {
+                    Some(bbox) => self.list.iter().skip(1).try_fold(bbox, |acc, hittable| {
+                        match hittable.bounding_box(t0, t1) {
+                            Some(bbox) => Some(aabb::surrounding_box(&acc, &bbox)),
+                            _ => None,
+                        }
+                    }),
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
     }
 }
