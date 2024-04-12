@@ -1,0 +1,6 @@
+2024-04-12 13:37:15 [INFO] - START WORKING WITH RAYTRACING AND RUST!
+2024-04-12 13:37:15 [DEBUG] - Initialize Camera
+2024-04-12 13:37:15 [DEBUG] - Initialize Scene (or World)
+2024-04-12 13:37:15 [DEBUG] - Create Image exploiting parallelization with rayon
+2024-04-12 16:03:01 [DEBUG] - Save image into a .ppm file
+2024-04-12 16:03:24 [INFO] - END WORKING WITH RAYTRACING AND RUST!
