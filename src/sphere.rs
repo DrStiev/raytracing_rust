@@ -60,7 +60,7 @@ impl<M: Material> Hittable for Sphere<M> {
         None
     }
 
-    fn bounding_box(&self, t0: f64, t1: f64) -> Option<crate::aabb::AABB> {
+    fn bounding_box(&self, _t0: f64, _t1: f64) -> Option<crate::aabb::AABB> {
         let radius = Vector3::new(self.radius, self.radius, self.radius);
         let min = self.center - radius;
         let max = self.center + radius;

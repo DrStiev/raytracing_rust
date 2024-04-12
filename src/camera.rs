@@ -60,8 +60,8 @@ impl Camera {
         };
         let time = self.time0 + rand::thread_rng().gen::<f64>() * (self.time1 - self.time0);
         Ray::new(
-            self.origin,
-            self.lower_left_corner + s * self.horizontal + t * self.vertical - self.origin,
+            origin,
+            self.lower_left_corner + s * self.horizontal + t * self.vertical - origin,
             time,
         )
     }

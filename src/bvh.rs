@@ -47,8 +47,9 @@ impl BVHNode {
             (hittable[0].clone(), hittable[1].clone())
         } else {
             (
-                Rc::new(BVHNode::new(&mut hittable[0..len / 2], time0, time1)) as Rc<Hittable>,
-                Rc::new(BVHNode::new(&mut hittable[len / 2..len], time0, time1)) as Rc<Hittable>,
+                Rc::new(BVHNode::new(&mut hittable[0..len / 2], time0, time1)) as Rc<dyn Hittable>,
+                Rc::new(BVHNode::new(&mut hittable[len / 2..len], time0, time1))
+                    as Rc<dyn Hittable>,
             )
         };
         let left_bbox = left.bounding_box(time0, time1);

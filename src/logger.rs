@@ -6,7 +6,6 @@ use std::io::Write;
 /*
 * Very rough logger
 */
-
 #[derive(Clone, Copy, Debug)]
 pub enum LogLevel {
     INFO,
