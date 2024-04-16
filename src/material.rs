@@ -3,6 +3,7 @@ use rand::Rng;
 
 use crate::hittable::HitRecord;
 use crate::ray::Ray;
+use crate::texture::Texture;
 use crate::util::random_in_unit_sphere;
 
 fn reflect(v: &Vector3<f64>, n: &Vector3<f64>) -> Vector3<f64> {
@@ -30,33 +31,33 @@ pub trait Material: Sync {
     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f64>)>;
 }
 
-pub struct Lambertian {
-    albedo: Vector3<f64>,
+pub struct Lambertian<T: Texture> {
+    albedo: T,
 }
 
-impl Lambertian {
-    pub fn new(albedo: Vector3<f64>) -> Self {
+impl<T: Texture + std::marker::Sync> Lambertian<T> {
+    pub fn new(albedo: T) -> Self {
         Self { albedo }
     }
 }
 
 // '_' before a variable name tells the compiler to not worry if the
 // parameter is not used. unless it throw a warning
-impl Material for Lambertian {
+impl<T: Texture + std::marker::Sync> Material for Lambertian<T> {
     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f64>)> {
         let target = hit.p + hit.normal + random_in_unit_sphere();
         let scattered = Ray::new(hit.p, target - hit.p, ray.time());
-        Some((scattered, self.albedo))
+        Some((scattered, self.albedo.value(0.0, 0.0, &hit.p)))
     }
 }
 
-pub struct Metal {
-    albedo: Vector3<f64>,
+pub struct Metal<T: Texture> {
+    albedo: T,
     fuzz: f64,
 }
 
-impl Metal {
-    pub fn new(albedo: Vector3<f64>, fuzz: f64) -> Self {
+impl<T: Texture + std::marker::Sync> Metal<T> {
+    pub fn new(albedo: T, fuzz: f64) -> Self {
         Self {
             albedo,
             fuzz: if fuzz < 1.0 { fuzz } else { 1.0 },
@@ -64,7 +65,7 @@ impl Metal {
     }
 }
 
-impl Material for Metal {
+impl<T: Texture + std::marker::Sync> Material for Metal<T> {
     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f64>)> {
         let mut reflected = reflect(&ray.direction().normalize(), &hit.normal);
         if self.fuzz > 0.0 {
@@ -72,7 +73,7 @@ impl Material for Metal {
         };
         if reflected.dot(&hit.normal) > 0.0 {
             let scattered = Ray::new(hit.p, reflected, ray.time());
-            Some((scattered, self.albedo))
+            Some((scattered, self.albedo.value(0.0, 0.0, &hit.p)))
         } else {
             None
         }

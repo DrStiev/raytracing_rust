@@ -10,9 +10,11 @@ mod color;
 mod hittable;
 mod logger;
 mod material;
+mod perlin;
 mod progressbar;
 mod ray;
 mod sphere;
+mod texture;
 mod util;
 
 // use image;
@@ -29,12 +31,13 @@ use crate::hittable::{Hittable, HittableList};
 use crate::material::{Dielectric, Lambertian, Metal};
 use crate::ray::Ray;
 use crate::sphere::{MovingSphere, Sphere};
+use crate::texture::{CheckerTexture, NoiseTexture, SolidTexture};
 use crate::util::{random_in_unit_disk, random_in_unit_sphere};
 use crate::{logger::*, progressbar::*, LogLevel::*};
 
 // #[cfg(test)]
 mod test;
-use crate::test::{random_scene, set_camera};
+use crate::test::{random_scene, set_camera, two_spheres};
 
 // cargo run > image.ppm
 
@@ -74,7 +77,7 @@ fn main() {
     l.set_description("Initialize Scene (or World)");
     let _ = l.write_to_file("log.log");
 
-    let world = random_scene();
+    let world = two_spheres(); // random_scene();
     println!("P3\n{} {}\n255", nx, ny);
 
     // USE OF RAYON. NOT CONVINCING RIGHT NOW
@@ -117,6 +120,7 @@ fn main() {
     l.set_level(DEBUG);
     l.set_description("Create Image");
     let _ = l.write_to_file("log.log");
+
     for j in (0..ny).rev() {
         for i in 0..nx {
             let mut col = Vector3::new(0.0, 0.0, 0.0);
@@ -138,6 +142,6 @@ fn main() {
     }
 
     l.set_level(INFO);
-    l.set_description("END WORKING WITH RAYTRACING AND RUST!");
+    l.set_description("END WORKING WITH RAYTRACING AND RUST!\n");
     let _ = l.write_to_file("log.log");
 }

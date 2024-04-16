@@ -28,15 +28,21 @@ pub fn set_camera(
 
 // #[test]
 // trait objects without an explicit `dyn` are deprecated
+// accepted in rust 2018 but hard erroin in rust 2021!
 pub fn random_scene() -> Box<dyn Hittable> {
     let mut rng = rand::thread_rng();
     let origin = Vector3::new(4.0, 0.2, 0.0);
     let mut world: Vec<Rc<dyn Hittable>> = Vec::new();
+    let checker = CheckerTexture::new(
+        SolidTexture::new(0.2, 0.3, 0.1),
+        SolidTexture::new(0.9, 0.9, 0.9),
+    );
     world.push(Rc::new(Sphere::new(
         Vector3::new(0.0, -1000.0, 0.0),
         1000.0,
-        Lambertian::new(Vector3::new(0.5, 0.5, 0.5)),
+        Lambertian::new(checker),
     )));
+
     for a in -10..10 {
         for b in -10..10 {
             let choose_material = rng.gen::<f64>();
@@ -54,7 +60,7 @@ pub fn random_scene() -> Box<dyn Hittable> {
                         0.0,
                         1.0,
                         0.2,
-                        Lambertian::new(Vector3::new(
+                        Lambertian::new(SolidTexture::new(
                             rng.gen::<f64>() * rng.gen::<f64>(),
                             rng.gen::<f64>() * rng.gen::<f64>(),
                             rng.gen::<f64>() * rng.gen::<f64>(),
@@ -66,7 +72,7 @@ pub fn random_scene() -> Box<dyn Hittable> {
                         center,
                         0.2,
                         Metal::new(
-                            Vector3::new(
+                            SolidTexture::new(
                                 0.5 * (1.0 + rng.gen::<f64>()),
                                 0.5 * (1.0 + rng.gen::<f64>()),
                                 0.5 * (1.0 + rng.gen::<f64>()),
@@ -89,12 +95,49 @@ pub fn random_scene() -> Box<dyn Hittable> {
     world.push(Rc::new(Sphere::new(
         Vector3::new(-4.0, 1.0, 0.0),
         1.0,
-        Lambertian::new(Vector3::new(0.4, 0.2, 0.1)),
+        Lambertian::new(SolidTexture::new(0.4, 0.2, 0.1)),
     )));
     world.push(Rc::new(Sphere::new(
         Vector3::new(4.0, 1.0, 0.0),
         1.0,
-        Metal::new(Vector3::new(0.7, 0.6, 0.5), 0.0),
+        Metal::new(SolidTexture::new(0.7, 0.6, 0.5), 0.0),
     )));
     Box::new(BVHNode::new(&mut world, 0.0, 1.0))
+}
+
+// #[test]
+pub fn two_spheres() -> Box<dyn Hittable> {
+    let checker = CheckerTexture::new(
+        SolidTexture::new(0.2, 0.3, 0.1),
+        SolidTexture::new(0.9, 0.9, 0.9),
+    );
+    let mut world = HittableList::default();
+    world.push(Sphere::new(
+        Vector3::new(0.0, -10.0, 0.0),
+        10.0,
+        Lambertian::new(checker.clone()),
+    ));
+    world.push(Sphere::new(
+        Vector3::new(0.0, 10.0, 0.0),
+        10.0,
+        Lambertian::new(checker),
+    ));
+    Box::new(world)
+}
+
+// #[test]
+pub fn two_perlin_sphere() -> Box<dyn Hittable> {
+    let noise = NoiseTexture::new(4.0);
+    let mut world = HittableList::default();
+    world.push(Sphere::new(
+        Vector3::new(0.0, -10.0, 0.0),
+        10.0,
+        Lambertian::new(noise.clone()),
+    ));
+    world.push(Sphere::new(
+        Vector3::new(0.0, 10.0, 0.0),
+        10.0,
+        Lambertian::new(noise),
+    ));
+    Box::new(world)
 }
