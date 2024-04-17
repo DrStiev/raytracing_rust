@@ -141,3 +141,15 @@ pub fn two_perlin_sphere() -> Box<dyn Hittable> {
     ));
     Box::new(world)
 }
+
+// #[test]
+pub fn earth() -> Box<dyn Hittable> {
+    let image = image::open("texture/earthmap.jpg")
+        .expect("image not found")
+        .to_rgb8();
+    let (nx, ny) = image.dimensions();
+    let data = image.into_raw();
+    let texture = ImageTexture::new(data, nx, ny);
+    let earth = Sphere::new(Vector3::new(0.0, 0.0, 0.0), 2.0, Lambertian::new(texture));
+    Box::new(earth)
+}
