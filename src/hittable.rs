@@ -8,6 +8,8 @@ use crate::ray::Ray;
 // can contain references with a specific lifetime
 pub struct HitRecord<'a> {
     pub t: f64,
+    pub u: f64,
+    pub v: f64,
     pub p: Vector3<f64>,
     pub normal: Vector3<f64>,
     pub material: &'a dyn Material,
@@ -59,5 +61,28 @@ impl Hittable for HittableList {
             }
             _ => None,
         }
+    }
+}
+
+pub struct FlipNormals<H: Hittable> {
+    hittable: H,
+}
+
+impl<H: Hittable> FlipNormals<H> {
+    pub fn new(hittable: H) -> Self {
+        Self { hittable }
+    }
+}
+
+impl<H: Hittable> Hittable for FlipNormals<H> {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        self.hittable.hit(&ray, t_min, t_max).map(|mut hit| {
+            hit.normal = -hit.normal;
+            hit
+        })
+    }
+
+    fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB> {
+        self.hittable.bounding_box(t0, t1)
     }
 }

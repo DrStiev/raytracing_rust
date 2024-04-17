@@ -9,6 +9,7 @@ pub mod material;
 pub mod perlin;
 pub mod progressbar;
 pub mod ray;
+pub mod rect;
 pub mod sphere;
 pub mod texture;
 pub mod util;

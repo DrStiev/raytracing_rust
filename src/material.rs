@@ -29,8 +29,10 @@ fn schlick(cosine: f64, ref_idx: f64) -> f64 {
 
 pub trait Material: Sync {
     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f64>)>;
+    fn emitted(&self, u: f64, v: f64, p: &Vector3<f64>) -> Vector3<f64>;
 }
 
+#[derive(Clone)]
 pub struct Lambertian<T: Texture> {
     albedo: T,
 }
@@ -47,7 +49,11 @@ impl<T: Texture + std::marker::Sync> Material for Lambertian<T> {
     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f64>)> {
         let target = hit.p + hit.normal + random_in_unit_sphere();
         let scattered = Ray::new(hit.p, target - hit.p, ray.time());
-        Some((scattered, self.albedo.value(0.0, 0.0, &hit.p)))
+        Some((scattered, self.albedo.value(hit.u, hit.v, &hit.p)))
+    }
+
+    fn emitted(&self, u: f64, v: f64, p: &Vector3<f64>) -> Vector3<f64> {
+        Vector3::new(0.0, 0.0, 0.0)
     }
 }
 
@@ -73,10 +79,14 @@ impl<T: Texture + std::marker::Sync> Material for Metal<T> {
         };
         if reflected.dot(&hit.normal) > 0.0 {
             let scattered = Ray::new(hit.p, reflected, ray.time());
-            Some((scattered, self.albedo.value(0.0, 0.0, &hit.p)))
+            Some((scattered, self.albedo.value(hit.u, hit.v, &hit.p)))
         } else {
             None
         }
+    }
+
+    fn emitted(&self, u: f64, v: f64, p: &Vector3<f64>) -> Vector3<f64> {
+        Vector3::new(0.0, 0.0, 0.0)
     }
 }
 
@@ -111,5 +121,29 @@ impl Material for Dielectric {
         let reflected = reflect(&ray.direction(), &hit.normal);
         let scattered = Ray::new(hit.p, reflected, ray.time());
         Some((scattered, attenuation))
+    }
+
+    fn emitted(&self, u: f64, v: f64, p: &Vector3<f64>) -> Vector3<f64> {
+        Vector3::new(0.0, 0.0, 0.0)
+    }
+}
+
+pub struct DiffuseLight<T: Texture> {
+    emit: T,
+}
+
+impl<T: Texture> DiffuseLight<T> {
+    pub fn new(emit: T) -> Self {
+        Self { emit }
+    }
+}
+
+impl<T: Texture + std::marker::Sync> Material for DiffuseLight<T> {
+    fn scatter(&self, _ray: &Ray, _hit: &HitRecord) -> Option<(Ray, Vector3<f64>)> {
+        None
+    }
+
+    fn emitted(&self, u: f64, v: f64, p: &Vector3<f64>) -> Vector3<f64> {
+        self.emit.value(u, v, &p)
     }
 }

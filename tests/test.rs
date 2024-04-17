@@ -16,9 +16,10 @@ use std::rc::Rc;
 use crate::bvh::BVHNode;
 use crate::camera::Camera;
 use crate::color::color;
-use crate::hittable::{Hittable, HittableList};
-use crate::material::{Dielectric, Lambertian, Metal};
+use crate::hittable::{FlipNormals, Hittable, HittableList};
+use crate::material::{Dielectric, DiffuseLight, Lambertian, Metal};
 use crate::ray::Ray;
+use crate::rect::{Plane, Rect};
 use crate::sphere::{MovingSphere, Sphere};
 use crate::texture::{CheckerTexture, ImageTexture, NoiseTexture, SolidTexture};
 use crate::util::{random_in_unit_disk, random_in_unit_sphere};
@@ -47,6 +48,38 @@ fn set_camera(
         time0,
         time1,
     )
+}
+
+fn create_image(ny: usize, nx: usize, ns: usize, cam: Camera, world: Box<dyn Hittable>) -> String {
+    let mut rng = rand::thread_rng();
+
+    let mut output = String::new();
+    write!(output, "P3\n{} {}\n255\n", nx, ny).unwrap();
+    // println!("P3\n{} {}\n255", nx, ny);
+
+    for j in (0..ny).rev() {
+        for i in 0..nx {
+            let mut col = Vector3::new(0.0, 0.0, 0.0);
+            for _ in 0..ns {
+                let u = (i as f64 + rng.gen::<f64>()) / nx as f64;
+                let v = (j as f64 + rng.gen::<f64>()) / ny as f64;
+                let ray = cam.get_ray(u, v);
+                col += color(&ray, &world, 0);
+            }
+            col /= ns as f64;
+            for c in col.iter_mut() {
+                // *c = c.sqrt();
+                *c = nalgebra::clamp(c.sqrt(), 0.0, 1.0);
+            }
+            let ir = (255.99 * col[0]) as i32;
+            let ig = (255.99 * col[1]) as i32;
+            let ib = (255.99 * col[2]) as i32;
+            write!(output, "{} {} {}\n", ir, ig, ib).unwrap();
+            // println!("{} {} {}", ir, ig, ib);
+        }
+    }
+
+    output
 }
 
 // trait objects without an explicit `dyn` are deprecated
@@ -173,35 +206,110 @@ fn earth() -> Box<dyn Hittable> {
     Box::new(earth)
 }
 
+fn simple_light() -> Box<dyn Hittable> {
+    let noise = NoiseTexture::new(4.0);
+    let mut world = HittableList::default();
+
+    world.push(Sphere::new(
+        Vector3::new(0.0, -1000.0, 0.0),
+        1000.0,
+        Lambertian::new(noise.clone()),
+    ));
+    world.push(Sphere::new(
+        Vector3::new(0.0, 2.0, 0.0),
+        2.0,
+        Lambertian::new(noise),
+    ));
+    world.push(Sphere::new(
+        Vector3::new(0.0, 7.0, 0.0),
+        2.0,
+        DiffuseLight::new(SolidTexture::new(4.0, 4.0, 4.0)),
+    ));
+    world.push(Rect::new(
+        Plane::XY,
+        3.0,
+        1.0,
+        5.0,
+        3.0,
+        -2.0,
+        DiffuseLight::new(SolidTexture::new(4.0, 4.0, 4.0)),
+    ));
+    Box::new(world)
+}
+
+fn cornell_box() -> Box<Hittable> {
+    let red = Lambertian::new(SolidTexture::new(0.65, 0.05, 0.05));
+    let white = Lambertian::new(SolidTexture::new(0.73, 0.73, 0.73));
+    let green = Lambertian::new(SolidTexture::new(0.12, 0.45, 0.15));
+
+    let light = DiffuseLight::new(SolidTexture::new(15.0, 15.0, 15.0));
+    let mut world = HittableList::default();
+    world.push(FlipNormals::new(Rect::new(
+        Plane::YZ,
+        0.0,
+        0.0,
+        555.0,
+        555.0,
+        555.0,
+        green,
+    )));
+    world.push(FlipNormals::new(Rect::new(
+        Plane::YZ,
+        0.0,
+        0.0,
+        555.0,
+        555.0,
+        0.0,
+        red,
+    )));
+    world.push(FlipNormals::new(Rect::new(
+        Plane::ZX,
+        227.0,
+        213.0,
+        332.0,
+        343.0,
+        554.0,
+        light,
+    )));
+    world.push(FlipNormals::new(Rect::new(
+        Plane::ZX,
+        0.0,
+        0.0,
+        555.0,
+        555.0,
+        0.0,
+        white.clone(),
+    )));
+    world.push(FlipNormals::new(Rect::new(
+        Plane::XY,
+        0.0,
+        0.0,
+        555.0,
+        555.0,
+        555.0,
+        white,
+    )));
+
+    Box::new(world)
+}
+
 #[test]
 fn test_random_scene() {
     // let total_steps: usize = 100; // this value is used to set the size of the pb and to make it display gracefully
     // progressbar(total_steps, "RAY TRACING IN ONE WEEK WITH RUST");
 
-    let mut rng = rand::thread_rng();
-    let log_path = "log/log.log";
-
     // set logger
-    let mut l = Logger::new();
-    l.set_level(INFO);
-    l.set_description("START WORKING WITH RAYTRACING AND RUST!");
-    let _ = l.write_to_file(log_path);
+    let mut l = Logger::new("log/log.log");
+    l.set_level(DEBUG);
+    l.write("Test random scene");
 
     // create  file
     let mut file = File::create("output/random_spheres.ppm").expect("REASON");
-
-    l.set_level(DEBUG);
-    l.set_description(&format!("Rendering scene: {}", "output/random_spheres.ppm"));
-    let _ = l.write_to_file(log_path);
 
     // set camera
     let ns = 100;
     let nx = 1280;
     let ny = 720;
-
-    l.set_level(DEBUG);
-    l.set_description("Initialize Camera");
-    let _ = l.write_to_file(log_path);
 
     let cam = set_camera(
         nx,
@@ -216,49 +324,12 @@ fn test_random_scene() {
         1.0,
     );
 
-    l.set_level(DEBUG);
-    l.set_description("Initialize Scene (or World)");
-    let _ = l.write_to_file(log_path);
-
     // chose which image to render
     let world = random_scene();
-
-    // create the image
-    l.set_level(DEBUG);
-    l.set_description("Create Image");
-    let _ = l.write_to_file(log_path);
-
-    let mut output = String::new();
-    write!(output, "P3\n{} {}\n255\n", nx, ny).unwrap();
-    // println!("P3\n{} {}\n255", nx, ny);
-
-    for j in (0..ny).rev() {
-        for i in 0..nx {
-            let mut col = Vector3::new(0.0, 0.0, 0.0);
-            for _ in 0..ns {
-                let u = (i as f64 + rng.gen::<f64>()) / nx as f64;
-                let v = (j as f64 + rng.gen::<f64>()) / ny as f64;
-                let ray = cam.get_ray(u, v);
-                col += color(&ray, &world, 0);
-            }
-            col /= ns as f64;
-            for c in col.iter_mut() {
-                *c = c.sqrt();
-            }
-            let ir = (255.99 * col[0]) as i32;
-            let ig = (255.99 * col[1]) as i32;
-            let ib = (255.99 * col[2]) as i32;
-            write!(output, "{} {} {}", ir, ig, ib).unwrap();
-            // println!("{} {} {}", ir, ig, ib);
-        }
-    }
-
+    let res = create_image(ny, nx, ns, cam, world);
     // write content into file
-    write!(file, "{}", output).expect("REASON");
-
-    l.set_level(INFO);
-    l.set_description("END WORKING WITH RAYTRACING AND RUST!\n");
-    let _ = l.write_to_file(log_path);
+    write!(file, "{}", res).expect("REASON");
+    l.write("Scene created successfully");
 }
 
 #[test]
@@ -266,30 +337,18 @@ fn test_two_sphere() {
     // let total_steps: usize = 100; // this value is used to set the size of the pb and to make it display gracefully
     // progressbar(total_steps, "RAY TRACING IN ONE WEEK WITH RUST");
 
-    let mut rng = rand::thread_rng();
-    let log_path = "log/log.log";
-
     // set logger
-    let mut l = Logger::new();
-    l.set_level(INFO);
-    l.set_description("START WORKING WITH RAYTRACING AND RUST!");
-    let _ = l.write_to_file(log_path);
+    let mut l = Logger::new("log/log.log");
+    l.set_level(DEBUG);
+    l.write("Test two spheres");
 
     // create  file
     let mut file = File::create("output/two_spheres.ppm").expect("REASON");
 
-    l.set_level(DEBUG);
-    l.set_description(&format!("Rendering scene: {}", "output/two_spheres.ppm"));
-    let _ = l.write_to_file(log_path);
-
     // set camera
-    let ns = 100;
+    let ns = 10;
     let nx = 1280;
     let ny = 720;
-
-    l.set_level(DEBUG);
-    l.set_description("Initialize Camera");
-    let _ = l.write_to_file(log_path);
 
     let cam = set_camera(
         nx,
@@ -304,49 +363,13 @@ fn test_two_sphere() {
         1.0,
     );
 
-    l.set_level(DEBUG);
-    l.set_description("Initialize Scene (or World)");
-    let _ = l.write_to_file(log_path);
-
     // chose which image to render
     let world = two_spheres();
 
-    // create the image
-    l.set_level(DEBUG);
-    l.set_description("Create Image");
-    let _ = l.write_to_file(log_path);
-
-    let mut output = String::new();
-    write!(output, "P3\n{} {}\n255\n", nx, ny).unwrap();
-    // println!("P3\n{} {}\n255", nx, ny);
-
-    for j in (0..ny).rev() {
-        for i in 0..nx {
-            let mut col = Vector3::new(0.0, 0.0, 0.0);
-            for _ in 0..ns {
-                let u = (i as f64 + rng.gen::<f64>()) / nx as f64;
-                let v = (j as f64 + rng.gen::<f64>()) / ny as f64;
-                let ray = cam.get_ray(u, v);
-                col += color(&ray, &world, 0);
-            }
-            col /= ns as f64;
-            for c in col.iter_mut() {
-                *c = c.sqrt();
-            }
-            let ir = (255.99 * col[0]) as i32;
-            let ig = (255.99 * col[1]) as i32;
-            let ib = (255.99 * col[2]) as i32;
-            write!(output, "{} {} {}", ir, ig, ib).unwrap();
-            // println!("{} {} {}", ir, ig, ib);
-        }
-    }
-
+    let res = create_image(ny, nx, ns, cam, world);
     // write content into file
-    write!(file, "{}", output).expect("REASON");
-
-    l.set_level(INFO);
-    l.set_description("END WORKING WITH RAYTRACING AND RUST!\n");
-    let _ = l.write_to_file(log_path);
+    write!(file, "{}", res).expect("REASON");
+    l.write("Image created successfully!");
 }
 
 #[test]
@@ -354,33 +377,18 @@ fn test_perlin_spheres() {
     // let total_steps: usize = 100; // this value is used to set the size of the pb and to make it display gracefully
     // progressbar(total_steps, "RAY TRACING IN ONE WEEK WITH RUST");
 
-    let mut rng = rand::thread_rng();
-    let log_path = "log/log.log";
-
     // set logger
-    let mut l = Logger::new();
-    l.set_level(INFO);
-    l.set_description("START WORKING WITH RAYTRACING AND RUST!");
-    let _ = l.write_to_file(log_path);
+    let mut l = Logger::new("log/log.log");
+    l.set_level(DEBUG);
+    l.write("Test two spheres with perlin noise");
 
     // create  file
     let mut file = File::create("output/two_perlin_spheres.ppm").expect("REASON");
 
-    l.set_level(DEBUG);
-    l.set_description(&format!(
-        "Rendering scene: {}",
-        "output/two_perlin_spheres.ppm"
-    ));
-    let _ = l.write_to_file(log_path);
-
     // set camera
-    let ns = 100;
+    let ns = 10;
     let nx = 1280;
     let ny = 720;
-
-    l.set_level(DEBUG);
-    l.set_description("Initialize Camera");
-    let _ = l.write_to_file(log_path);
 
     let cam = set_camera(
         nx,
@@ -395,49 +403,13 @@ fn test_perlin_spheres() {
         1.0,
     );
 
-    l.set_level(DEBUG);
-    l.set_description("Initialize Scene (or World)");
-    let _ = l.write_to_file(log_path);
-
     // chose which image to render
     let world = two_perlin_sphere();
 
-    // create the image
-    l.set_level(DEBUG);
-    l.set_description("Create Image");
-    let _ = l.write_to_file(log_path);
-
-    let mut output = String::new();
-    write!(output, "P3\n{} {}\n255\n", nx, ny).unwrap();
-    // println!("P3\n{} {}\n255", nx, ny);
-
-    for j in (0..ny).rev() {
-        for i in 0..nx {
-            let mut col = Vector3::new(0.0, 0.0, 0.0);
-            for _ in 0..ns {
-                let u = (i as f64 + rng.gen::<f64>()) / nx as f64;
-                let v = (j as f64 + rng.gen::<f64>()) / ny as f64;
-                let ray = cam.get_ray(u, v);
-                col += color(&ray, &world, 0);
-            }
-            col /= ns as f64;
-            for c in col.iter_mut() {
-                *c = c.sqrt();
-            }
-            let ir = (255.99 * col[0]) as i32;
-            let ig = (255.99 * col[1]) as i32;
-            let ib = (255.99 * col[2]) as i32;
-            write!(output, "{} {} {}", ir, ig, ib).unwrap();
-            // println!("{} {} {}", ir, ig, ib);
-        }
-    }
-
+    let res = create_image(ny, nx, ns, cam, world);
     // write content into file
-    write!(file, "{}", output).expect("REASON");
-
-    l.set_level(INFO);
-    l.set_description("END WORKING WITH RAYTRACING AND RUST!\n");
-    let _ = l.write_to_file(log_path);
+    write!(file, "{}", res).expect("REASON");
+    l.write("Image created successfully!");
 }
 
 #[test]
@@ -445,30 +417,18 @@ fn test_earth() {
     // let total_steps: usize = 100; // this value is used to set the size of the pb and to make it display gracefully
     // progressbar(total_steps, "RAY TRACING IN ONE WEEK WITH RUST");
 
-    let mut rng = rand::thread_rng();
-    let log_path = "log/log.log";
-
     // set logger
-    let mut l = Logger::new();
-    l.set_level(INFO);
-    l.set_description("START WORKING WITH RAYTRACING AND RUST!");
-    let _ = l.write_to_file(log_path);
+    let mut l = Logger::new("log/log.log");
+    l.set_level(DEBUG);
+    l.write("Test earth scene");
 
     // create  file
     let mut file = File::create("output/earth.ppm").expect("REASON");
 
-    l.set_level(DEBUG);
-    l.set_description(&format!("Rendering scene: {}", "output/earth.ppm"));
-    let _ = l.write_to_file(log_path);
-
     // set camera
-    let ns = 100;
+    let ns = 10;
     let nx = 1280;
     let ny = 720;
-
-    l.set_level(DEBUG);
-    l.set_description("Initialize Camera");
-    let _ = l.write_to_file(log_path);
 
     let cam = set_camera(
         nx,
@@ -483,47 +443,89 @@ fn test_earth() {
         1.0,
     );
 
-    l.set_level(DEBUG);
-    l.set_description("Initialize Scene (or World)");
-    let _ = l.write_to_file(log_path);
-
     // chose which image to render
     let world = earth();
 
-    // create the image
-    l.set_level(DEBUG);
-    l.set_description("Create Image");
-    let _ = l.write_to_file(log_path);
-
-    let mut output = String::new();
-    write!(output, "P3\n{} {}\n255\n", nx, ny).unwrap();
-    // println!("P3\n{} {}\n255", nx, ny);
-
-    for j in (0..ny).rev() {
-        for i in 0..nx {
-            let mut col = Vector3::new(0.0, 0.0, 0.0);
-            for _ in 0..ns {
-                let u = (i as f64 + rng.gen::<f64>()) / nx as f64;
-                let v = (j as f64 + rng.gen::<f64>()) / ny as f64;
-                let ray = cam.get_ray(u, v);
-                col += color(&ray, &world, 0);
-            }
-            col /= ns as f64;
-            for c in col.iter_mut() {
-                *c = c.sqrt();
-            }
-            let ir = (255.99 * col[0]) as i32;
-            let ig = (255.99 * col[1]) as i32;
-            let ib = (255.99 * col[2]) as i32;
-            write!(output, "{} {} {}", ir, ig, ib).unwrap();
-            // println!("{} {} {}", ir, ig, ib);
-        }
-    }
-
+    let res = create_image(ny, nx, ns, cam, world);
     // write content into file
-    write!(file, "{}", output).expect("REASON");
+    write!(file, "{}", res).expect("REASON");
+    l.write("Image created successfully!");
+}
 
-    l.set_level(INFO);
-    l.set_description("END WORKING WITH RAYTRACING AND RUST!\n");
-    let _ = l.write_to_file(log_path);
+#[test]
+fn test_simple_light() {
+    // let total_steps: usize = 100; // this value is used to set the size of the pb and to make it display gracefully
+    // progressbar(total_steps, "RAY TRACING IN ONE WEEK WITH RUST");
+
+    // set logger
+    let mut l = Logger::new("log/log.log");
+    l.set_level(DEBUG);
+    l.write("Test simple light");
+
+    // create  file
+    let mut file = File::create("output/simple_light.ppm").expect("REASON");
+
+    // set camera
+    let ns = 100;
+    let nx = 1280;
+    let ny = 720;
+
+    let cam = set_camera(
+        nx,
+        ny,
+        Vector3::new(13.0, 3.0, 3.0),
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        50.0,
+        10.0,
+        0.1,
+        0.0,
+        1.0,
+    );
+
+    // chose which image to render
+    let world = random_scene();
+    let res = create_image(ny, nx, ns, cam, world);
+    // write content into file
+    write!(file, "{}", res).expect("REASON");
+    l.write("Scene created successfully");
+}
+
+#[test]
+fn test_cornell_box() {
+    // let total_steps: usize = 100; // this value is used to set the size of the pb and to make it display gracefully
+    // progressbar(total_steps, "RAY TRACING IN ONE WEEK WITH RUST");
+
+    // set logger
+    let mut l = Logger::new("log/log.log");
+    l.set_level(DEBUG);
+    l.write("Test cornell box");
+
+    // create  file
+    let mut file = File::create("output/cornell_box.ppm").expect("REASON");
+
+    // set camera
+    let ns = 100;
+    let nx = 800;
+    let ny = 800;
+
+    let cam = set_camera(
+        nx,
+        ny,
+        Vector3::new(278.0, 278.0, -800.0),
+        Vector3::new(278.0, 278.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        40.0,
+        10.0,
+        0.1,
+        0.0,
+        1.0,
+    );
+
+    // chose which image to render
+    let world = cornell_box();
+    let res = create_image(ny, nx, ns, cam, world);
+    // write content into file
+    write!(file, "{}", res).expect("REASON");
+    l.write("Scene created successfully");
 }

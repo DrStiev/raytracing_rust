@@ -1,9 +1,18 @@
 use nalgebra::Vector3;
+use std::f64;
 
 use crate::aabb::{self, AABB};
 use crate::hittable::{HitRecord, Hittable};
 use crate::material::Material;
 use crate::ray::Ray;
+
+fn get_sphere_uv(p: &Vector3<f64>) -> (f64, f64) {
+    let phi = p.z.atan2(p.x);
+    let theta = p.y.asin();
+    let u = 1.0 - (phi + f64::consts::PI) / (2.0 * f64::consts::PI);
+    let v = (theta + f64::consts::FRAC_2_PI) / f64::consts::PI;
+    (u, v)
+}
 
 // <M: Material> means that the struct can hold any type of 'M'
 // that implements the 'Material' trait
@@ -38,9 +47,12 @@ impl<M: Material> Hittable for Sphere<M> {
             if t < t_max && t > t_min {
                 let p = ray.pointing_at(t);
                 let normal = (p - self.center) / self.radius;
+                let (u, v) = get_sphere_uv(&normal);
                 return Some(HitRecord {
                     t,
                     p,
+                    u,
+                    v,
                     normal,
                     material: &self.material,
                 });
@@ -49,9 +61,12 @@ impl<M: Material> Hittable for Sphere<M> {
             if t < t_max && t > t_min {
                 let p = ray.pointing_at(t);
                 let normal = (p - self.center) / self.radius;
+                let (u, v) = get_sphere_uv(&normal);
                 return Some(HitRecord {
                     t,
                     p,
+                    u,
+                    v,
                     normal,
                     material: &self.material,
                 });
@@ -118,9 +133,12 @@ impl<M: Material> Hittable for MovingSphere<M> {
             if t < t_max && t > t_min {
                 let p = ray.pointing_at(t);
                 let normal = (p - center) / self.radius;
+                let (u, v) = get_sphere_uv(&normal);
                 return Some(HitRecord {
                     t,
                     p,
+                    u,
+                    v,
                     normal,
                     material: &self.material,
                 });
@@ -129,9 +147,12 @@ impl<M: Material> Hittable for MovingSphere<M> {
             if t < t_max && t > t_min {
                 let p = ray.pointing_at(t);
                 let normal = (p - center) / self.radius;
+                let (u, v) = get_sphere_uv(&normal);
                 return Some(HitRecord {
                     t,
                     p,
+                    u,
+                    v,
                     normal,
                     material: &self.material,
                 });

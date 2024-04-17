@@ -26,7 +26,7 @@ fn perlin_generate() -> Vec<Vector3<f64>> {
 }
 
 fn perlin_generate_perm() -> Vec<usize> {
-    let mut rng = rand::thread_rng();
+    // let mut rng = rand::thread_rng();
     let mut p = Vec::with_capacity(256);
     for i in 0..256 {
         p.push(i);
@@ -76,9 +76,9 @@ impl Perlin {
     fn noise(&self, p: &Vector3<f64>) -> f64 {
         // & -> bit and operator
         // ^ bitxor operator
-        let mut u = p.x - f64::floor(p.x);
-        let mut v = p.y - f64::floor(p.y);
-        let mut w = p.z - f64::floor(p.z);
+        let u = p.x - f64::floor(p.x);
+        let v = p.y - f64::floor(p.y);
+        let w = p.z - f64::floor(p.z);
 
         let i = f64::floor(p.x) as usize;
         let j = f64::floor(p.y) as usize;
