@@ -52,11 +52,12 @@ impl<T: Texture + std::marker::Sync> Material for Lambertian<T> {
         Some((scattered, self.albedo.value(hit.u, hit.v, &hit.p)))
     }
 
-    fn emitted(&self, u: f64, v: f64, p: &Vector3<f64>) -> Vector3<f64> {
-        Vector3::new(0.0, 0.0, 0.0)
+    fn emitted(&self, _u: f64, _v: f64, _p: &Vector3<f64>) -> Vector3<f64> {
+        Vector3::zeros()
     }
 }
 
+#[derive(Clone)]
 pub struct Metal<T: Texture> {
     albedo: T,
     fuzz: f64,
@@ -85,11 +86,12 @@ impl<T: Texture + std::marker::Sync> Material for Metal<T> {
         }
     }
 
-    fn emitted(&self, u: f64, v: f64, p: &Vector3<f64>) -> Vector3<f64> {
-        Vector3::new(0.0, 0.0, 0.0)
+    fn emitted(&self, _u: f64, _v: f64, _p: &Vector3<f64>) -> Vector3<f64> {
+        Vector3::zeros()
     }
 }
 
+#[derive(Clone)]
 pub struct Dielectric {
     ref_idx: f64,
 }
@@ -123,8 +125,8 @@ impl Material for Dielectric {
         Some((scattered, attenuation))
     }
 
-    fn emitted(&self, u: f64, v: f64, p: &Vector3<f64>) -> Vector3<f64> {
-        Vector3::new(0.0, 0.0, 0.0)
+    fn emitted(&self, _u: f64, _v: f64, _p: &Vector3<f64>) -> Vector3<f64> {
+        Vector3::zeros()
     }
 }
 
@@ -145,5 +147,27 @@ impl<T: Texture + std::marker::Sync> Material for DiffuseLight<T> {
 
     fn emitted(&self, u: f64, v: f64, p: &Vector3<f64>) -> Vector3<f64> {
         self.emit.value(u, v, &p)
+    }
+}
+
+#[derive(Clone)]
+pub struct Isotropic<T: Texture> {
+    albedo: T,
+}
+
+impl<T: Texture> Isotropic<T> {
+    pub fn new(albedo: T) -> Self {
+        Self { albedo }
+    }
+}
+
+impl<T: Texture + std::marker::Sync> Material for Isotropic<T> {
+    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f64>)> {
+        let scattered = Ray::new(hit.p, random_in_unit_sphere(), ray.time());
+        Some((scattered, self.albedo.value(hit.u, hit.v, &hit.p)))
+    }
+
+    fn emitted(&self, _u: f64, _v: f64, _p: &Vector3<f64>) -> Vector3<f64> {
+        Vector3::zeros()
     }
 }

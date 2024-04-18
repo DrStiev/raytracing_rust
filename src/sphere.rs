@@ -16,6 +16,7 @@ fn get_sphere_uv(p: &Vector3<f64>) -> (f64, f64) {
 
 // <M: Material> means that the struct can hold any type of 'M'
 // that implements the 'Material' trait
+#[derive(Clone)]
 pub struct Sphere<M: Material> {
     center: Vector3<f64>,
     radius: f64,

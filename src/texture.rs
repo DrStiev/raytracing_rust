@@ -66,7 +66,7 @@ impl Texture for NoiseTexture {
     fn value(&self, _u: f64, _v: f64, p: &Vector3<f64>) -> Vector3<f64> {
         Vector3::new(1.0, 1.0, 1.0)
             * 0.5
-            * (1.0 + f64::sin(self.scale * p.z + 10.0 * self.noise.turb(&p, 7)))
+            * (1.0 + f64::sin(self.scale * p.x + 5.0 * self.noise.turb(&p, 7)))
     }
 }
 
