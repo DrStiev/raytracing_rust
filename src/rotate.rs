@@ -39,8 +39,8 @@ impl<H: Hittable> Rotate<H> {
                 for j in 0..2 {
                     for k in 0..2 {
                         let r = k as f64 * b.max[r_axis] + (1 - k) as f64 * b.min[r_axis];
-                        let a = k as f64 * b.max[a_axis] + (1 - k) as f64 * b.min[a_axis];
-                        let b = k as f64 * b.max[b_axis] + (1 - k) as f64 * b.min[b_axis];
+                        let a = i as f64 * b.max[a_axis] + (1 - i) as f64 * b.min[a_axis];
+                        let b = j as f64 * b.max[b_axis] + (1 - j) as f64 * b.min[b_axis];
 
                         let new_a = cos_theta * a - sin_theta * b;
                         let new_b = sin_theta * a + cos_theta * b;
@@ -112,7 +112,7 @@ impl<H: Hittable> Hittable for Rotate<H> {
             })
     }
 
-    fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB> {
+    fn bounding_box(&self, _t0: f64, _t1: f64) -> Option<AABB> {
         self.bbox.clone()
     }
 }

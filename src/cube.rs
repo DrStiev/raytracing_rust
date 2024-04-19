@@ -1,5 +1,5 @@
 use crate::aabb::AABB;
-use crate::hittable::{FlipNormals, HitRecord, Hittable, HittableList};
+use crate::hittable::{HitRecord, Hittable, HittableList};
 use crate::material::Material;
 use crate::ray::Ray;
 use crate::rect::{Plane, Rect};
@@ -85,7 +85,7 @@ impl Hittable for Cube {
         self.sides.hit(&ray, t_min, t_max)
     }
 
-    fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB> {
+    fn bounding_box(&self, _t0: f64, _t1: f64) -> Option<AABB> {
         Some(AABB {
             min: self.p_min,
             max: self.p_max,

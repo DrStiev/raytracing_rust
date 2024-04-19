@@ -2,14 +2,12 @@ use raytracing_in_rust::*;
 
 use std::fmt::Write;
 use std::fs::File;
-use std::io::{self, Write as OtherWrite};
-use std::{thread, time};
+use std::io::Write as OtherWrite;
 extern crate termsize;
 
 use image;
 use nalgebra::Vector3;
 use rand::Rng;
-use rayon::prelude::*;
 use std::f64;
 use std::rc::Rc;
 
@@ -20,14 +18,14 @@ use crate::cube::Cube;
 use crate::hittable::{FlipNormals, Hittable, HittableList};
 use crate::material::{Dielectric, DiffuseLight, Lambertian, Metal};
 use crate::medium::ConstantMedium;
-use crate::ray::Ray;
 use crate::rect::{Plane, Rect};
 use crate::rotate::{Axis, Rotate};
 use crate::sphere::{MovingSphere, Sphere};
 use crate::texture::{CheckerTexture, ImageTexture, NoiseTexture, SolidTexture};
 use crate::traslate::Traslate;
-use crate::util::{random_in_unit_disk, random_in_unit_sphere};
-use crate::{logger::*, progressbar::*, LogLevel::*};
+use crate::{logger::*, LogLevel::*};
+
+// cargo test -- --test-threads=1
 
 fn set_camera(
     nx: usize,
@@ -187,13 +185,13 @@ fn two_perlin_sphere() -> Box<dyn Hittable> {
     let noise = NoiseTexture::new(4.0);
     let mut world = HittableList::default();
     world.push(Sphere::new(
-        Vector3::new(0.0, -10.0, 0.0),
-        10.0,
+        Vector3::new(0.0, -1000.0, 0.0),
+        1000.0,
         Lambertian::new(noise.clone()),
     ));
     world.push(Sphere::new(
-        Vector3::new(0.0, 10.0, 0.0),
-        10.0,
+        Vector3::new(0.0, 2.0, 0.0),
+        2.0,
         Lambertian::new(noise),
     ));
     Box::new(world)
@@ -257,16 +255,8 @@ fn cornell_box() -> Box<dyn Hittable> {
         555.0,
         green,
     )));
-    world.push(FlipNormals::new(Rect::new(
-        Plane::YZ,
-        0.0,
-        0.0,
-        555.0,
-        555.0,
-        0.0,
-        red,
-    )));
-    world.push(FlipNormals::new(Rect::new(
+    world.push(Rect::new(Plane::YZ, 0.0, 0.0, 555.0, 555.0, 0.0, red));
+    world.push(Rect::new(
         Plane::ZX,
         227.0,
         213.0,
@@ -274,7 +264,7 @@ fn cornell_box() -> Box<dyn Hittable> {
         343.0,
         554.0,
         light,
-    )));
+    ));
     world.push(FlipNormals::new(Rect::new(
         Plane::ZX,
         0.0,
@@ -284,6 +274,15 @@ fn cornell_box() -> Box<dyn Hittable> {
         0.0,
         white.clone(),
     )));
+    world.push(Rect::new(
+        Plane::ZX,
+        0.0,
+        0.0,
+        555.0,
+        555.0,
+        0.0,
+        white.clone(),
+    ));
     world.push(FlipNormals::new(Rect::new(
         Plane::XY,
         0.0,
@@ -359,7 +358,7 @@ fn cornell_smoke() -> Box<dyn Hittable> {
         white.clone(),
     )));
     world.push(Rect::new(
-        Plane::XY,
+        Plane::ZX,
         0.0,
         0.0,
         555.0,
@@ -422,7 +421,7 @@ fn final_scene() -> Box<dyn Hittable> {
     let white = Lambertian::new(SolidTexture::new(0.73, 0.73, 0.73));
     let ground = Lambertian::new(SolidTexture::new(0.48, 0.83, 0.53));
     let mut world = HittableList::default();
-    let mut box_list1: Vec<Rc<Hittable>> = Vec::new();
+    let mut box_list1: Vec<Rc<dyn Hittable>> = Vec::new();
     let nb = 20;
     for i in 0..nb {
         for j in 0..20 {
@@ -487,7 +486,7 @@ fn final_scene() -> Box<dyn Hittable> {
         0.0001,
         SolidTexture::new(1.0, 1.0, 1.0),
     ));
-    let image = image::open("earthmap.png")
+    let image = image::open("texture/earthmap.jpg")
         .expect("image not found")
         .to_rgb8();
     let (nx, ny) = image.dimensions();
@@ -503,7 +502,7 @@ fn final_scene() -> Box<dyn Hittable> {
         80.0,
         Lambertian::new(NoiseTexture::new(0.1)),
     ));
-    let mut box_list2: Vec<Rc<Hittable>> = Vec::new();
+    let mut box_list2: Vec<Rc<dyn Hittable>> = Vec::new();
     let ns = 1000;
     for _ in 0..ns {
         box_list2.push(Rc::new(Sphere::new(
